@@ -1,0 +1,51 @@
+name: build
+
+# CINTENT >> MANUAL_TRIGGER
+# on: [push, pull_request]
+on: [repository_dispatch, workflow_dispatch]
+
+jobs:
+  build:
+    # [macos-latest, macos-latest, windows-latest]
+    runs-on: ubuntu-latest
+    strategy:
+      # You can use PyPy versions in python-version.
+      # For example, pypy3.10
+      matrix:
+        # CINTENT >> REMOVE_MATRIX
+        # python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # CINTENT >> INSERT_CINTENT
+      - uses: JavidDitty/setup-cintent@a606c80c34ec190c6a20dea33d6d58ddb6c4e0cc
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          allow-prereleases: true
+
+      # You can test your matrix by printing the current Python version
+      - name: Display Python version
+        run: python --version
+
+      - name: Install dependencies
+        run: |
+            sudo apt install graphviz
+            pip install --upgrade pip
+            pip install --upgrade setuptools
+            python -m pip install -e ".[test]"
+
+      - name: Test with pytest
+        run: pytest -vs tests/ --cov causalml/
+
+      # CINTENT >> INSERT_CINTENT
+      - name: Upload CIntent Artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ${{ env.CINTENT_ARTIFACT_NAME }}
+          path: ${{ env.CINTENT_LOGS }}
